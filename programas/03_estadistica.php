@@ -1,79 +1,80 @@
 <?php
 require_once __DIR__ . '/../layout.php';
 
-class CalculadoraEstadistica
-{
-    private array $datos;
-
-    public function __construct(array $datos)
-    {
-        $this->datos = $datos;
-    }
-
-    public function promedio(): float
-    {
-        return array_sum($this->datos) / count($this->datos);
-    }
-
-    public function mediana(): float
-    {
-        $ordenados = $this->datos;
-        sort($ordenados);
-        $total = count($ordenados);
-        $mitad = intdiv($total, 2);
-
-        if ($total % 2 !== 0) {
-            return (float) $ordenados[$mitad];
-        } else {
-            return ($ordenados[$mitad - 1] + $ordenados[$mitad]) / 2.0;
-}
-    }
-
-    public function moda(): array
-    {
-        $conteo = [];
-        foreach ($this->datos as $n) {
-            $clave = (string)$n;
-            $conteo[$clave] = ($conteo[$clave] ?? 0) + 1;
-        }
-
-        $maxFrecuencia = max($conteo);
-        if ($maxFrecuencia <= 1) return [];
-
-        return array_keys(
-            array_filter($conteo, fn($f) => $f === $maxFrecuencia)
-        );
-    }
-
-    public function total(): int { return count($this->datos); }
-}
-
-$promedio  = null;
-$mediana   = null;
-$moda      = null;
-$total     = 0;
-$errores   = [];
-$inputRaw  = $_POST['numeros'] ?? '';
+$promedio = null;
+$mediana  = null;
+$moda     = null;
+$total    = 0;
+$errores  = [];
+$inputRaw = $_POST['numeros'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $partes  = preg_split('/[\s,;]+/', trim($inputRaw), -1, PREG_SPLIT_NO_EMPTY);
     $validos = [];
 
     foreach ($partes as $p) {
-        is_numeric($p)
-            ? ($validos[] = (float)$p)
-            : ($errores[]  = "Valor inválido: «{$p}» no es un número.");
+        if (is_numeric($p)) {
+            $validos[] = (float)$p;
+        } else {
+            $errores[] = "Valor inválido: «{$p}» no es un número.";
+        }
     }
 
     if (empty($errores)) {
         if (count($validos) < 2) {
             $errores[] = 'Ingresa al menos 2 números.';
         } else {
-            $est       = new CalculadoraEstadistica($validos);
-            $promedio  = $est->promedio();
-            $mediana   = $est->mediana();
-            $moda      = $est->moda();
-            $total     = $est->total();
+            $total = count($validos);
+
+            
+            $suma     = 0;
+            foreach ($validos as $num) {
+                $suma = $suma + $num;
+            }
+            $promedio = $suma / $total;
+
+            
+            $ordenados = $validos;
+            sort($ordenados);
+            $mitad = intdiv($total, 2);
+
+            if ($total % 2 !== 0) {
+                
+                $mediana = (float) $ordenados[$mitad];
+            } else {
+                
+                $mediana = ($ordenados[$mitad - 1] + $ordenados[$mitad]) / 2.0;
+            }
+
+            
+            $conteo = [];
+            foreach ($validos as $num) {
+                $clave = (string)$num;
+                if (isset($conteo[$clave])) {
+                    $conteo[$clave] = $conteo[$clave] + 1;
+                } else {
+                    $conteo[$clave] = 1;
+                }
+            }
+
+            
+            $maxFrecuencia = 0;
+            foreach ($conteo as $frecuencia) {
+                if ($frecuencia > $maxFrecuencia) {
+                    $maxFrecuencia = $frecuencia;
+                }
+            }
+
+           
+            $moda = [];
+            if ($maxFrecuencia > 1) {
+                foreach ($conteo as $numero => $frecuencia) {
+                    if ($frecuencia === $maxFrecuencia) {
+                        $moda[] = $numero;
+                    }
+                }
+            }
         }
     }
 }
@@ -95,8 +96,12 @@ $base = '../';
         <div class="sidebar-logo"><h1>PHP · POO</h1><p>Portafolio de ejercicios</p></div>
         <nav>
             <?php foreach ($menu as $clave => $item):
-                $url    = urlMenu($clave, $base);
-                $activo = esActivo($clave, $base) ? 'activo' : '';
+                $url = urlMenu($clave, $base);
+                if (esActivo($clave, $base)) {
+                    $activo = 'activo';
+                } else {
+                    $activo = '';
+                }
             ?>
             <a href="<?= htmlspecialchars($url) ?>" class="<?= $activo ?>">
                 <span class="num"><?= $item['num'] ?></span>
@@ -112,6 +117,7 @@ $base = '../';
             <span class="badge">App 03</span>
         </div>
         <main>
+
             <?php foreach ($errores as $e): ?>
                 <div class="alerta alerta-error"><?= htmlspecialchars($e) ?></div>
             <?php endforeach; ?>
@@ -143,13 +149,16 @@ $base = '../';
                 <div class="fila-dato">
                     <span class="etiqueta">Moda</span>
                     <span class="valor-dato">
-                        <?= empty($moda)
-                            ? 'Sin moda (valores únicos)'
-                            : implode(', ', $moda) ?>
+                        <?php if (empty($moda)): ?>
+                            Sin moda (valores únicos)
+                        <?php else: ?>
+                            <?= implode(', ', $moda) ?>
+                        <?php endif; ?>
                     </span>
                 </div>
             </div>
             <?php endif; ?>
+
         </main>
     </div>
 </div>
