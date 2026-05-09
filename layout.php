@@ -1,6 +1,6 @@
 <?php
 
-$enApps  = (strpos(__DIR__, 'apps') !== false);
+$enApps  = (strpos(__DIR__, 'programas') !== false);
 $base    = $enApps ? '../' : '';
 
 
