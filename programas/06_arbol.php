@@ -127,13 +127,16 @@ class ArbolBinario
     }
 }
 
-// ── HELPERS ──────────────────────────────────────────────
+
+
+
 function separarRecorrido(string $input): array
 {
     $limpio = preg_replace('/[-–→>]+/', ',', $input);
     $tokens = preg_split('/[\s,;]+/', trim($limpio), -1, PREG_SPLIT_NO_EMPTY);
     return array_map('strtoupper', $tokens);
 }
+
 
 
 $arbol   = null;

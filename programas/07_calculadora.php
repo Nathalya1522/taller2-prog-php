@@ -41,7 +41,7 @@ class Calculadora
     }
 }
 
-// Variables iniciales
+
 $resultado = null;
 $expresion = '';
 $errores   = [];
@@ -49,7 +49,7 @@ $numA      = $_POST['num_a'] ?? '';
 $numB      = $_POST['num_b'] ?? '';
 $opSel     = $_POST['operacion'] ?? '';
 
-// Acción: calcular
+
 if (isset($_POST['calcular'])) {
     $aLimpio = trim($numA);
     $bLimpio = trim($numB);

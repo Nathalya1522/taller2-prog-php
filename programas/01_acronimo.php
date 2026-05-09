@@ -1,70 +1,40 @@
 <?php
 require_once __DIR__ . '/../layout.php';
 
-class Acronimo
-{
-    private string $entrada;
-
-    public function __construct(string $entrada)
-    {
-        $this->entrada = $entrada;
-    }
-
-    private function normalizar(): string
-    {
-        
-        $sin_guiones  = str_replace(['-', '_'], ' ', $this->entrada);
-        $sin_puntuacion = preg_replace('/[^\p{L}\s]/u', '', $sin_guiones);
-        return trim($sin_puntuacion);
-    }
-
-    public function generar(): string
-    {
-        $palabras = array_filter(
-            explode(' ', $this->normalizar()),
-            fn($p) => $p !== ''
-        );
-
-        return implode('', array_map(
-            fn($p) => mb_strtoupper(mb_substr($p, 0, 1, 'UTF-8'), 'UTF-8'),
-            $palabras
-        ));
-    }
-
-    public function getFraseNormalizada(): string
-    {
-        return $this->normalizar();
-    }
-}
-
-$acronimo  = null;
+$acronimo    = null;
 $normalizada = '';
-$errores   = [];
-$frase     = $_POST['frase'] ?? '';
+$errores     = [];
+$frase       = $_POST['frase'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $frase = trim($frase);
 
-    match(true) {
-        $frase === ''            => $errores[] = 'Escribe una frase antes de convertir.',
-        strlen($frase) < 3      => $errores[] = 'La frase es demasiado corta.',
-        default                  => null,
-    };
+    if ($frase === '') {
+        $errores[] = 'Escribe una frase antes de convertir.';
+    } elseif (strlen($frase) < 3) {
+        $errores[] = 'La frase es demasiado corta.';
+    } else {
+        // 1. Reemplazar guiones por espacios
+        $normalizada = str_replace(['-', '_'], ' ', $frase);
 
-    if (empty($errores)) {
-        $obj         = new Acronimo($frase);
-        $acronimo    = $obj->generar();
-        $normalizada = $obj->getFraseNormalizada();
+        // 2. Quitar signos de puntuacion
+        $normalizada = preg_replace('/[^\p{L}\s]/u', '', $normalizada);
+
+        // 3. Quitar espacios al inicio y al final
+        $normalizada = trim($normalizada);
+
+        // 4. Dividir en palabras
+        $palabras = explode(' ', $normalizada);
+
+        // 5. Recorrer cada palabra y tomar la primera letra
+        $acronimo = '';
+        foreach ($palabras as $palabra) {
+            if ($palabra !== '') {
+                $acronimo .= mb_strtoupper(mb_substr($palabra, 0, 1, 'UTF-8'), 'UTF-8');
+            }
+        }
     }
 }
-
-$ejemplos = [
-    ['frase' => 'As Soon As Possible',       'resultado' => 'ASAP'],
-    ['frase' => 'Liquid-crystal display',     'resultado' => 'LCD'],
-    ['frase' => "Thank George It's Friday!",  'resultado' => 'TGIF'],
-    ['frase' => 'Portable Network Graphics',  'resultado' => 'PNG'],
-    ['frase' => 'Graphics Interchange Format','resultado' => 'GIF'],
-];
 
 $base = '../';
 ?>
@@ -87,7 +57,11 @@ $base = '../';
         <nav>
             <?php foreach ($menu as $clave => $item):
                 $url    = urlMenu($clave, $base);
-                $activo = esActivo($clave, $base) ? 'activo' : '';
+                if (esActivo($clave, $base)) {
+                    $activo = 'activo';
+                } else {
+                    $activo = '';
+                }
             ?>
             <a href="<?= htmlspecialchars($url) ?>" class="<?= $activo ?>">
                 <span class="num"><?= $item['num'] ?></span>
@@ -135,8 +109,6 @@ $base = '../';
             </div>
             <?php endif; ?>
 
-           
-            
         </main>
     </div>
 
