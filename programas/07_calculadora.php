@@ -1,86 +1,56 @@
 <?php
 require_once __DIR__ . '/../layout.php';
 
-class Calculadora
-{
-    private float  $a;
-    private float  $b;
-    private string $op;
-
-    private const SIMBOLOS = [
-        'suma'           => '+',
-        'resta'          => '−',
-        'multiplicacion' => '×',
-        'division'       => '÷',
-        'porcentaje'     => '%',
-    ];
-
-    public function __construct(float $a, float $b, string $op)
-    {
-        $this->a  = $a;
-        $this->b  = $b;
-        $this->op = $op;
-    }
-
-    public function ejecutar(): float|false
-    {
-        return match($this->op) {
-            'suma'           => $this->a + $this->b,
-            'resta'          => $this->a - $this->b,
-            'multiplicacion' => $this->a * $this->b,
-            'division'       => $this->b != 0 ? $this->a / $this->b : false,
-            'porcentaje'     => ($this->a * $this->b) / 100,
-            default          => false,
-        };
-    }
-
-    public function expresion(): string
-    {
-        $sim = self::SIMBOLOS[$this->op] ?? '?';
-        return "{$this->a} {$sim} {$this->b}";
-    }
-}
-
-
 $resultado = null;
 $expresion = '';
 $errores   = [];
-$numA      = $_POST['num_a'] ?? '';
-$numB      = $_POST['num_b'] ?? '';
+$numA      = $_POST['num_a']    ?? '';
+$numB      = $_POST['num_b']    ?? '';
 $opSel     = $_POST['operacion'] ?? '';
 
-
 if (isset($_POST['calcular'])) {
-    $aLimpio = trim($numA);
-    $bLimpio = trim($numB);
 
-    if (!is_numeric($aLimpio) || !is_numeric($bLimpio)) {
+    
+    if (!is_numeric($numA) || !is_numeric($numB)) {
         $errores[] = 'Ambos campos deben ser números válidos.';
-    } elseif ($opSel === '') {
+    } elseif ($opSel == '') {
         $errores[] = 'Selecciona una operación.';
-    }
+    } else {
 
-    if (empty($errores)) {
-        $calc      = new Calculadora((float)$aLimpio, (float)$bLimpio, $opSel);
-        $resultado = $calc->ejecutar();
-        $expresion = $calc->expresion();
+        $a = (float)$numA;
+        $b = (float)$numB;
 
-        if ($resultado === false) {
-            $errores[] = 'Error: División por cero no está permitida.';
-            $resultado = null;
-        } else {
+    
+        if ($opSel == 'suma') {
+            $resultado = $a + $b;
+            $expresion = "$a + $b";
+
+        } elseif ($opSel == 'resta') {
+            $resultado = $a - $b;
+            $expresion = "$a − $b";
+
+        } elseif ($opSel == 'multiplicacion') {
+            $resultado = $a * $b;
+            $expresion = "$a × $b";
+
+        } elseif ($opSel == 'division') {
+            if ($b == 0) {
+                $errores[] = 'Error: División por cero no está permitida.';
+            } else {
+                $resultado = $a / $b;
+                $expresion = "$a ÷ $b";
+            }
+
+        } elseif ($opSel == 'porcentaje') {
+            $resultado = ($a * $b) / 100;
+            $expresion = "$a% de $b";
+        }
+
+        if ($resultado !== null) {
             $resultado = round($resultado, 10);
         }
     }
 }
-
-$opciones = [
-    'suma'           => 'Suma  (+)',
-    'resta'          => 'Resta  (−)',
-    'multiplicacion' => 'Multiplicación  (×)',
-    'division'       => 'División  (÷)',
-    'porcentaje'     => 'Porcentaje  (A% de B)',
-];
 
 $base = '../';
 ?>
@@ -99,8 +69,12 @@ $base = '../';
         <div class="sidebar-logo"><h1>PHP · POO</h1><p>Portafolio de ejercicios</p></div>
         <nav>
             <?php foreach ($menu as $clave => $item):
-                $url    = urlMenu($clave, $base);
-                $activo = esActivo($clave, $base) ? 'activo' : '';
+                $url = urlMenu($clave, $base);
+                if (esActivo($clave, $base)) {
+                    $activo = 'activo';
+                } else {
+                    $activo = '';
+                }
             ?>
             <a href="<?= htmlspecialchars($url) ?>" class="<?= $activo ?>">
                 <span class="num"><?= $item['num'] ?></span>
@@ -116,6 +90,7 @@ $base = '../';
             <span class="badge">App 07</span>
         </div>
         <main>
+
             <?php foreach ($errores as $e): ?>
                 <div class="alerta alerta-error"><?= htmlspecialchars($e) ?></div>
             <?php endforeach; ?>
@@ -141,12 +116,11 @@ $base = '../';
                         <label for="operacion">Operación</label>
                         <select id="operacion" name="operacion">
                             <option value="">— Selecciona —</option>
-                            <?php foreach ($opciones as $val => $etiq): ?>
-                            <option value="<?= $val ?>"
-                                <?= $opSel === $val ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($etiq) ?>
-                            </option>
-                            <?php endforeach; ?>
+                            <option value="suma"           <?php if ($opSel == 'suma')           { echo 'selected'; } ?>>Suma (+)</option>
+                            <option value="resta"          <?php if ($opSel == 'resta')          { echo 'selected'; } ?>>Resta (−)</option>
+                            <option value="multiplicacion" <?php if ($opSel == 'multiplicacion') { echo 'selected'; } ?>>Multiplicación (×)</option>
+                            <option value="division"       <?php if ($opSel == 'division')       { echo 'selected'; } ?>>División (÷)</option>
+                            <option value="porcentaje"     <?php if ($opSel == 'porcentaje')     { echo 'selected'; } ?>>Porcentaje (A% de B)</option>
                         </select>
                     </div>
                     <button type="submit" name="calcular" class="btn btn-primary">= Calcular</button>
@@ -162,6 +136,7 @@ $base = '../';
                 <div class="resultado-valor"><?= htmlspecialchars((string)$resultado) ?></div>
             </div>
             <?php endif; ?>
+
         </main>
     </div>
 </div>

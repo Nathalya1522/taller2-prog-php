@@ -1,169 +1,96 @@
 <?php
 require_once __DIR__ . '/../layout.php';
 
-
-class Nodo
-{
+class Nodo {
     public string $valor;
-    public ?Nodo  $izq = null;
-    public ?Nodo  $der = null;
-
-    public function __construct(string $valor)
-    {
-        $this->valor = $valor;
-    }
+    public $izq = null;
+    public $der = null;
+    public function __construct(string $v) { $this->valor = $v; }
 }
 
-class ArbolBinario
-{
-    private ?Nodo $raiz = null;
+function construir(array $pre, array $ino) {
+    if (count($pre) == 0) return null;
 
-    // Reconstruye desde Preorden + Inorden
-    public function desdePreIn(array $pre, array $ino): void
-    {
-        $this->raiz = $this->construirPreIn($pre, $ino);
+    $raiz = $pre[0];
+    $nodo = new Nodo($raiz);
+
+    $pos = 0;
+    for ($i = 0; $i < count($ino); $i++) {
+        if ($ino[$i] == $raiz) { $pos = $i; break; }
     }
 
-    // Reconstruye desde Postorden + Inorden
-    public function desdePostIn(array $post, array $ino): void
-    {
-        $this->raiz = $this->construirPostIn($post, $ino);
-    }
+    $inoIzq = array_slice($ino, 0, $pos);
+    $inoDer = array_slice($ino, $pos + 1);
+    $preIzq = array_slice($pre, 1, count($inoIzq));
+    $preDer = array_slice($pre, 1 + count($inoIzq));
 
-    private function construirPreIn(array $pre, array $ino): ?Nodo
-    {
-        if (empty($pre)) return null;
+    
+    $nodo->izq = construir($preIzq, $inoIzq);
+    $nodo->der = construir($preDer, $inoDer);
 
-        $raizVal = $pre[0];
-        $nodo    = new Nodo($raizVal);
-        $pos     = array_search($raizVal, $ino, true);
-
-        if ($pos === false) return $nodo;
-
-        $nodo->izq = $this->construirPreIn(
-            array_slice($pre, 1, $pos),
-            array_slice($ino, 0, $pos)
-        );
-
-        $nodo->der = $this->construirPreIn(
-            array_slice($pre, $pos + 1),
-            array_slice($ino, $pos + 1)
-        );
-
-        return $nodo;
-    }
-
-    private function construirPostIn(array $post, array $ino): ?Nodo
-    {
-        if (empty($post)) return null;
-
-        $raizVal = $post[array_key_last($post)];
-        $nodo    = new Nodo($raizVal);
-        $pos     = array_search($raizVal, $ino, true);
-
-        if ($pos === false) return $nodo;
-
-        $nodo->izq = $this->construirPostIn(
-            array_slice($post, 0, $pos),
-            array_slice($ino, 0, $pos)
-        );
-
-        $nodo->der = $this->construirPostIn(
-            array_slice($post, $pos, count($post) - $pos - 1),
-            array_slice($ino, $pos + 1)
-        );
-
-        return $nodo;
-    }
-
-    public function preorden(): array  { $r = []; $this->_pre($this->raiz, $r);  return $r; }
-    public function inorden(): array   { $r = []; $this->_in($this->raiz, $r);   return $r; }
-    public function postorden(): array { $r = []; $this->_post($this->raiz, $r); return $r; }
-
-    private function _pre(?Nodo $n, array &$r): void
-    {
-        if (!$n) return;
-        $r[] = $n->valor;
-        $this->_pre($n->izq, $r);
-        $this->_pre($n->der, $r);
-    }
-
-    private function _in(?Nodo $n, array &$r): void
-    {
-        if (!$n) return;
-        $this->_in($n->izq, $r);
-        $r[] = $n->valor;
-        $this->_in($n->der, $r);
-    }
-
-    private function _post(?Nodo $n, array &$r): void
-    {
-        if (!$n) return;
-        $this->_post($n->izq, $r);
-        $this->_post($n->der, $r);
-        $r[] = $n->valor;
-    }
-
-    // Visualización ASCII
-    public function dibujar(): string
-    {
-        if (!$this->raiz) return '(árbol vacío)';
-        $lineas = [];
-        $this->dibujarNodo($this->raiz, '', true, $lineas);
-        return implode("\n", $lineas);
-    }
-
-    private function dibujarNodo(?Nodo $n, string $pref, bool $esUltimo, array &$lines): void
-    {
-        if (!$n) return;
-        $conector = $esUltimo ? '└── ' : '├── ';
-        $lines[]  = $pref . $conector . '[' . $n->valor . ']';
-        $nuevoPref = $pref . ($esUltimo ? '    ' : '│   ');
-        $hijos     = array_filter([$n->izq, $n->der]);
-        $total     = count($hijos);
-        $idx       = 0;
-        if ($n->izq) { $this->dibujarNodo($n->izq, $nuevoPref, (++$idx === $total), $lines); }
-        if ($n->der) { $this->dibujarNodo($n->der, $nuevoPref, (++$idx === $total), $lines); }
-    }
+    return $nodo;
 }
 
 
+function preorden($n, &$r)  { if (!$n) return; $r[] = $n->valor; preorden($n->izq, $r);  preorden($n->der, $r); }
+function inorden($n, &$r)   { if (!$n) return; inorden($n->izq, $r);  $r[] = $n->valor; inorden($n->der, $r); }
+function postorden($n, &$r) { if (!$n) return; postorden($n->izq, $r); postorden($n->der, $r); $r[] = $n->valor; }
 
 
-function separarRecorrido(string $input): array
-{
-    $limpio = preg_replace('/[-–→>]+/', ',', $input);
+function dibujar($nodo, $pref, $esUltimo, &$lineas) {
+    if ($nodo == null) return;
+    $lineas[] = $pref . ($esUltimo ? '└── ' : '├── ') . '[' . $nodo->valor . ']';
+    $nuevoPref = $pref . ($esUltimo ? '    ' : '│   ');
+    if ($nodo->izq) dibujar($nodo->izq, $nuevoPref, $nodo->der == null, $lineas);
+    if ($nodo->der) dibujar($nodo->der, $nuevoPref, true, $lineas);
+}
+
+
+function separar(string $texto): array {
+    $limpio = preg_replace('/[-→>]+/', ',', $texto);
     $tokens = preg_split('/[\s,;]+/', trim($limpio), -1, PREG_SPLIT_NO_EMPTY);
-    return array_map('strtoupper', $tokens);
+    $resultado = [];
+    for ($i = 0; $i < count($tokens); $i++) {
+        $resultado[] = strtoupper($tokens[$i]);
+    }
+    return $resultado;
 }
 
 
-
-$arbol   = null;
-$dibujo  = '';
-$errores = [];
-$preStr  = $_POST['preorden']  ?? '';
-$inoStr  = $_POST['inorden']   ?? '';
-$postStr = $_POST['postorden'] ?? '';
+$errores   = [];
+$dibujo    = '';
+$preorden  = [];
+$inorden   = [];
+$postorden = [];
+$raiz      = null;
+$preStr    = $_POST['preorden']  ?? '';
+$inoStr    = $_POST['inorden']   ?? '';
+$postStr   = $_POST['postorden'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pre  = !empty(trim($preStr))  ? separarRecorrido($preStr)  : [];
-    $ino  = !empty(trim($inoStr))  ? separarRecorrido($inoStr)  : [];
-    $post = !empty(trim($postStr)) ? separarRecorrido($postStr) : [];
 
-    $cantidad = (int)(!empty($pre)) + (int)(!empty($ino)) + (int)(!empty($post));
+    $pre  = trim($preStr)  != '' ? separar($preStr)  : [];
+    $ino  = trim($inoStr)  != '' ? separar($inoStr)  : [];
+    $post = trim($postStr) != '' ? separar($postStr) : [];
+
+    $cantidad = (count($pre) > 0 ? 1 : 0)
+              + (count($ino) > 0 ? 1 : 0)
+              + (count($post) > 0 ? 1 : 0);
 
     if ($cantidad < 2) {
         $errores[] = 'Debes ingresar al menos dos recorridos.';
-    } elseif (empty($ino)) {
-        $errores[] = 'El recorrido INORDEN es obligatorio para reconstruir el árbol.';
+    } elseif (count($ino) == 0) {
+        $errores[] = 'El recorrido INORDEN es obligatorio.';
     } else {
-        $arbol = new ArbolBinario();
-        !empty($pre)
-            ? $arbol->desdePreIn($pre, $ino)
-            : $arbol->desdePostIn($post, $ino);
+        $raiz = construir($pre, $ino);
 
-        $dibujo = $arbol->dibujar();
+        $lineas = [];
+        dibujar($raiz, '', true, $lineas);
+        $dibujo = implode("\n", $lineas);
+
+        preorden($raiz,  $preorden);
+        inorden($raiz,   $inorden);
+        postorden($raiz, $postorden);
     }
 }
 
@@ -184,8 +111,8 @@ $base = '../';
         <div class="sidebar-logo"><h1>PHP · POO</h1><p>Portafolio de ejercicios</p></div>
         <nav>
             <?php foreach ($menu as $clave => $item):
-                $url    = urlMenu($clave, $base);
-                $activo = esActivo($clave, $base) ? 'activo' : '';
+                $url = urlMenu($clave, $base);
+                if (esActivo($clave, $base)) { $activo = 'activo'; } else { $activo = ''; }
             ?>
             <a href="<?= htmlspecialchars($url) ?>" class="<?= $activo ?>">
                 <span class="num"><?= $item['num'] ?></span>
@@ -201,6 +128,7 @@ $base = '../';
             <span class="badge">App 06</span>
         </div>
         <main>
+
             <?php foreach ($errores as $e): ?>
                 <div class="alerta alerta-error"><?= htmlspecialchars($e) ?></div>
             <?php endforeach; ?>
@@ -235,7 +163,7 @@ $base = '../';
                 </form>
             </div>
 
-            <?php if ($arbol && empty($errores)): ?>
+            <?php if ($raiz != null && count($errores) == 0): ?>
             <div class="arbol-vista">
                 <p style="font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;color:var(--suave);margin-bottom:12px;">Estructura del árbol</p>
                 <pre><?= htmlspecialchars($dibujo) ?></pre>
@@ -245,18 +173,19 @@ $base = '../';
                 <p class="resultado-titulo">Recorridos generados</p>
                 <div class="fila-dato">
                     <span class="etiqueta">Preorden</span>
-                    <span style="color:var(--verde);font-size:0.85rem;"><?= implode(' → ', $arbol->preorden()) ?></span>
+                    <span style="color:var(--verde);font-size:0.85rem;"><?= implode(' → ', $preorden) ?></span>
                 </div>
                 <div class="fila-dato">
                     <span class="etiqueta">Inorden</span>
-                    <span style="color:var(--verde);font-size:0.85rem;"><?= implode(' → ', $arbol->inorden()) ?></span>
+                    <span style="color:var(--verde);font-size:0.85rem;"><?= implode(' → ', $inorden) ?></span>
                 </div>
                 <div class="fila-dato">
                     <span class="etiqueta">Postorden</span>
-                    <span style="color:var(--verde);font-size:0.85rem;"><?= implode(' → ', $arbol->postorden()) ?></span>
+                    <span style="color:var(--verde);font-size:0.85rem;"><?= implode(' → ', $postorden) ?></span>
                 </div>
             </div>
             <?php endif; ?>
+
         </main>
     </div>
 </div>

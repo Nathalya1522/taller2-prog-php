@@ -1,51 +1,44 @@
 <?php
 require_once __DIR__ . '/../layout.php';
 
-class ConvertidorBinario
-{
-    private int $entero;
-
-    public function __construct(int $entero)
-    {
-        $this->entero = $entero;
-    }
-
-    public function aBinario(): string
-    {
-        if ($this->entero === 0) return '0';
-
-        $numero = abs($this->entero);
-        $bits   = [];
-
-        while ($numero > 0) {
-            array_unshift($bits, $numero % 2);
-            $numero = intdiv($numero, 2);
-        }
-
-        $resultado = implode('', $bits);
-        return ($this->entero < 0 ? '-' : '') . $resultado;
-    }
-
-    public function getEntero(): int { return $this->entero; }
-}
-
-
 $binario  = null;
 $errores  = [];
 $inputNum = $_POST['numero'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $numLimpio = trim($inputNum);
 
-    if (!preg_match('/^-?\d+$/', $numLimpio)) {
-        $errores[] = 'Ingresa un número entero válido (positivo o negativo).';
-    } elseif (abs((int)$numLimpio) > PHP_INT_MAX) {
-        $errores[] = 'El número es demasiado grande.';
-    }
+    $numero = trim($inputNum);
 
-    if (empty($errores)) {
-        $conv    = new ConvertidorBinario((int)$numLimpio);
-        $binario = $conv->aBinario();
+    if ($numero == '') {
+        $errores[] = 'Escribe un número antes de convertir.';
+    } elseif (!is_numeric($numero)) {
+        $errores[] = 'Ingresa un número entero válido.';
+    } else {
+
+        $numero = (int)$numero;
+
+        if ($numero == 0) {
+            $binario = '0';
+        } else {
+
+            $esNegativo = false;
+            if ($numero < 0) {
+                $esNegativo = true;
+                $numero     = $numero * -1; 
+            }
+
+            $binario = '';
+
+            while ($numero > 0) {
+                $residuo = $numero % 2;  
+                $binario = $residuo . $binario; 
+                $numero  = (int)($numero / 2);  
+            }
+
+            if ($esNegativo) {
+                $binario = '-' . $binario;
+            }
+        }
     }
 }
 
@@ -66,8 +59,12 @@ $base = '../';
         <div class="sidebar-logo"><h1>PHP · POO</h1><p>Portafolio de ejercicios</p></div>
         <nav>
             <?php foreach ($menu as $clave => $item):
-                $url    = urlMenu($clave, $base);
-                $activo = esActivo($clave, $base) ? 'activo' : '';
+                $url = urlMenu($clave, $base);
+                if (esActivo($clave, $base)) {
+                    $activo = 'activo';
+                } else {
+                    $activo = '';
+                }
             ?>
             <a href="<?= htmlspecialchars($url) ?>" class="<?= $activo ?>">
                 <span class="num"><?= $item['num'] ?></span>
@@ -83,6 +80,7 @@ $base = '../';
             <span class="badge">App 05</span>
         </div>
         <main>
+
             <?php foreach ($errores as $e): ?>
                 <div class="alerta alerta-error"><?= htmlspecialchars($e) ?></div>
             <?php endforeach; ?>
@@ -106,6 +104,7 @@ $base = '../';
                 <div class="resultado-valor"><?= htmlspecialchars($binario) ?></div>
             </div>
             <?php endif; ?>
+
         </main>
     </div>
 </div>
